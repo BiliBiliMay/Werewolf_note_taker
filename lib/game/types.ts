@@ -30,8 +30,9 @@ export interface Player {
 export interface StructuredEntry {
   id: string;
   actorId: number;
-  actionType: QuickActionType;
+  actionType?: QuickActionType;
   targetId?: number;
+  content?: string;
   phaseIndex: number;
   section: PhaseSection;
   createdAt: string;

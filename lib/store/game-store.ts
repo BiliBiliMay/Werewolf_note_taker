@@ -49,9 +49,18 @@ const createInitialSession = (playerCount: number): GameSessionState => ({
 
 type StructuredEntryInput = {
   actorId: number;
-  actionType: QuickActionType;
-  targetId?: number;
-};
+} & (
+  | {
+      actionType: QuickActionType;
+      targetId?: number;
+      content?: never;
+    }
+  | {
+      actionType?: never;
+      targetId?: never;
+      content: string;
+    }
+);
 
 export interface GameStore extends GameSessionState {
   hasHydrated: boolean;
@@ -165,11 +174,17 @@ export function createGameStore(storage?: StateStorage) {
         setActiveSection: (section) => {
           set({ activeSection: section });
         },
-        addStructuredEntry: ({ actorId, actionType, targetId }) => {
+        addStructuredEntry: (input) => {
           set((state) => {
             const phase = state.phases[state.currentPhaseIndex];
 
             if (!phase || !isDayPhase(phase)) {
+              return state;
+            }
+
+            const content = "content" in input ? input.content.trim() : "";
+
+            if ("content" in input && content.length === 0) {
               return state;
             }
 
@@ -178,9 +193,10 @@ export function createGameStore(storage?: StateStorage) {
 
             const entry = {
               id: createId("entry"),
-              actorId,
-              actionType,
-              targetId,
+              actorId: input.actorId,
+              actionType: input.actionType,
+              targetId: input.targetId,
+              content: content || undefined,
               phaseIndex: state.currentPhaseIndex,
               section,
               createdAt: new Date().toISOString(),

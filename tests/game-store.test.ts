@@ -63,6 +63,27 @@ describe("game store", () => {
     }
   });
 
+  it("stores free-form speech content in the active section", () => {
+    const store = createGameStore(createMemoryStorage());
+
+    store.getState().startGame(9);
+    store.getState().addStructuredEntry({
+      actorId: 4,
+      content: "我先站边2号，再看7号。",
+    });
+
+    const dayPhase = store.getState().phases[0];
+    expect(dayPhase.type).toBe("day");
+
+    if (dayPhase.type === "day") {
+      expect(dayPhase.speechesUp).toHaveLength(1);
+      expect(dayPhase.speechesUp[0]).toMatchObject({
+        actorId: 4,
+        content: "我先站边2号，再看7号。",
+      });
+    }
+  });
+
   it("replaces votes by voter and exposes leader or tie states", () => {
     const store = createGameStore(createMemoryStorage());
 

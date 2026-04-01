@@ -282,6 +282,7 @@ export function GamePage() {
 
   const [selectedAction, setSelectedAction] = useState<QuickActionType | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
+  const [speechDraft, setSpeechDraft] = useState("");
 
   const currentPhase = phases[currentPhaseIndex];
   const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? null;
@@ -293,6 +294,7 @@ export function GamePage() {
     QUICK_ACTION_OPTIONS.find((option) => option.value === selectedAction) ?? null;
   const currentSectionLabel =
     DAY_SECTION_OPTIONS.find((option) => option.value === currentSection)?.label ?? "警上发言";
+  const trimmedSpeechDraft = speechDraft.trim();
 
   const quickActionPreview = useMemo(() => {
     if (!selectedPlayer || !selectedAction || !currentPhase || !isDayPhase(currentPhase)) {
@@ -322,15 +324,35 @@ export function GamePage() {
     selectedTargetId,
   ]);
 
+  const speechPreview = useMemo(() => {
+    if (!selectedPlayer || !currentPhase || !isDayPhase(currentPhase) || !trimmedSpeechDraft) {
+      return null;
+    }
+
+    return formatStructuredEntry({
+      id: "preview-speech",
+      actorId: selectedPlayer.id,
+      content: trimmedSpeechDraft,
+      phaseIndex: currentPhaseIndex,
+      section: currentSection,
+      createdAt: new Date().toISOString(),
+    });
+  }, [currentPhase, currentPhaseIndex, currentSection, selectedPlayer, trimmedSpeechDraft]);
+
   const canSaveQuickAction =
     Boolean(selectedPlayer) &&
     Boolean(selectedAction) &&
     Boolean(currentPhase && isDayPhase(currentPhase)) &&
     (!selectedActionOption?.needsTargetHint || selectedTargetId !== null);
+  const canSaveSpeech =
+    Boolean(selectedPlayer) &&
+    Boolean(currentPhase && isDayPhase(currentPhase)) &&
+    trimmedSpeechDraft.length > 0;
 
   useEffect(() => {
     setSelectedAction(null);
     setSelectedTargetId(null);
+    setSpeechDraft("");
   }, [currentPhaseIndex, selectedPlayerId]);
 
   if (!hasHydrated) {
@@ -387,6 +409,18 @@ export function GamePage() {
     });
     setSelectedAction(null);
     setSelectedTargetId(null);
+  };
+
+  const handleSaveSpeech = () => {
+    if (!selectedPlayer || !currentPhase || !isDayPhase(currentPhase) || !trimmedSpeechDraft) {
+      return;
+    }
+
+    addStructuredEntry({
+      actorId: selectedPlayer.id,
+      content: trimmedSpeechDraft,
+    });
+    setSpeechDraft("");
   };
 
   return (
@@ -568,7 +602,7 @@ export function GamePage() {
               </div>
             </div>
 
-            <div className="panel sticky top-5 z-10 p-5">
+            <div className="panel p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="section-title">快捷记录</p>
@@ -594,7 +628,7 @@ export function GamePage() {
 
               {selectedPlayer ? (
                 <div className="mt-5 space-y-5">
-                  <div>
+                  <section className="rounded-3xl border border-black/10 bg-white/50 p-4">
                     <p className="text-sm font-medium text-slate-600">选择动作</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {QUICK_ACTION_OPTIONS.map((option) => (
@@ -614,49 +648,88 @@ export function GamePage() {
                         </button>
                       ))}
                     </div>
-                  </div>
+                    {selectedActionOption?.needsTargetHint ? (
+                      <div>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium text-slate-600">目标玩家</p>
+                          <button
+                            className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                            onClick={() => setSelectedTargetId(null)}
+                            type="button"
+                          >
+                            清空目标
+                          </button>
+                        </div>
+                        <div className="mt-2">
+                          <PlayerNumberChips
+                            excludeId={selectedPlayer.id}
+                            onSelect={setSelectedTargetId}
+                            players={players}
+                            selectedId={selectedTargetId}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
 
-                  {selectedActionOption?.needsTargetHint ? (
-                    <div>
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium text-slate-600">目标玩家</p>
-                        <button
-                          className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
-                          onClick={() => setSelectedTargetId(null)}
-                          type="button"
-                        >
-                          清空目标
-                        </button>
-                      </div>
-                      <div className="mt-2">
-                        <PlayerNumberChips
-                          excludeId={selectedPlayer.id}
-                          onSelect={setSelectedTargetId}
-                          players={players}
-                          selectedId={selectedTargetId}
-                        />
-                      </div>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                      {isDayPhase(currentPhase)
+                        ? quickActionPreview ?? "先选择动作；需要目标时再点选玩家号码。"
+                        : "当前是夜晚阶段，快捷记录会在白天阶段恢复。"}
                     </div>
-                  ) : null}
 
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-                    {isDayPhase(currentPhase)
-                      ? quickActionPreview ?? "先选择动作；需要目标时再点选玩家号码。"
-                      : "当前是夜晚阶段，快捷记录会在白天阶段恢复。"}
-                  </div>
+                    <button
+                      className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      disabled={!canSaveQuickAction}
+                      onClick={handleSaveQuickAction}
+                      type="button"
+                    >
+                      记录到当前阶段
+                    </button>
+                  </section>
 
-                  <button
-                    className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    disabled={!canSaveQuickAction}
-                    onClick={handleSaveQuickAction}
-                    type="button"
-                  >
-                    记录到当前阶段
-                  </button>
+                  <section className="rounded-3xl border border-black/10 bg-white/50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <label
+                        className="text-sm font-medium text-slate-600"
+                        htmlFor="speech-draft"
+                      >
+                        补充发言
+                      </label>
+                      <button
+                        className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                        onClick={() => setSpeechDraft("")}
+                        type="button"
+                      >
+                        清空输入
+                      </button>
+                    </div>
+                    <textarea
+                      className="mt-3 min-h-28 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                      disabled={!isDayPhase(currentPhase)}
+                      id="speech-draft"
+                      onChange={(event) => setSpeechDraft(event.target.value)}
+                      placeholder={`输入 ${selectedPlayer.id}号 的具体发言，例如：我先站边2号，警徽流看7号。`}
+                      rows={4}
+                      value={speechDraft}
+                    />
+                    <div className="mt-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-900">
+                      {isDayPhase(currentPhase)
+                        ? speechPreview ?? "可以直接打字记录玩家原话、逻辑、警徽流和临场判断。"
+                        : "当前是夜晚阶段，文字发言记录会在白天阶段恢复。"}
+                    </div>
+                    <button
+                      className="mt-3 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      disabled={!canSaveSpeech}
+                      onClick={handleSaveSpeech}
+                      type="button"
+                    >
+                      记录文字发言
+                    </button>
+                  </section>
                 </div>
               ) : (
                 <div className="mt-5 rounded-2xl border border-dashed border-black/10 bg-white/50 px-4 py-5 text-sm leading-7 text-slate-500">
-                  从左侧点选一个玩家卡片，然后直接选择 跳预 / 金水 / 查杀 / 站边 / 打 / 保 / 划水。
+                  从左侧点选一个玩家卡片，然后直接选择 跳预 / 金水 / 查杀 / 站边 / 打 / 保 / 划水，或者直接输入这名玩家的发言内容。
                 </div>
               )}
             </div>

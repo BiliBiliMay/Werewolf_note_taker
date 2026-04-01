@@ -88,13 +88,25 @@ export function getPhaseLabelZh(phase: Phase) {
 }
 
 export function formatStructuredEntry(entry: StructuredEntry) {
-  const actionLabel = QUICK_ACTION_LABELS[entry.actionType];
+  const content = entry.content?.trim();
+
+  if (content) {
+    return `${entry.actorId}号：${content}`;
+  }
+
+  const actionLabel = entry.actionType ? QUICK_ACTION_LABELS[entry.actionType] : "记录";
   const targetText = entry.targetId ? `${entry.targetId}号` : "";
   return `${entry.actorId}号：${actionLabel}${targetText}`;
 }
 
 export function formatStructuredEntryCompact(entry: StructuredEntry) {
-  const actionLabel = QUICK_ACTION_LABELS[entry.actionType];
+  const content = entry.content?.trim();
+
+  if (content) {
+    return `[${entry.actorId}号] [发言] ${content}`;
+  }
+
+  const actionLabel = entry.actionType ? QUICK_ACTION_LABELS[entry.actionType] : "记录";
   const targetText = entry.targetId ? ` -> ${entry.targetId}号` : "";
   return `[${entry.actorId}号] [${actionLabel}]${targetText}`;
 }
