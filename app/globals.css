@@ -1,0 +1,82 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f4efe3;
+  --panel: rgba(255, 252, 247, 0.84);
+  --panel-strong: rgba(255, 252, 247, 0.95);
+  --border: rgba(15, 23, 32, 0.12);
+  --text: #17202a;
+  --muted: #5f6b76;
+  --accent: #f97316;
+  --danger: #b91c1c;
+  --success: #15803d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(255, 244, 214, 0.9), transparent 38%),
+    linear-gradient(135deg, #fbf7ef 0%, #f0e6d5 48%, #e6d8c2 100%);
+  color: var(--text);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(15, 23, 32, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 32, 0.015) 1px, transparent 1px);
+  background-size: 18px 18px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 90%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(249, 115, 22, 0.2);
+}
+
+@layer components {
+  .panel {
+    @apply rounded-3xl border border-black/10 bg-white/80 shadow-panel backdrop-blur-sm;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium transition;
+  }
+
+  .chip-active {
+    @apply border-amber-500 bg-amber-500 text-white shadow-sm;
+  }
+
+  .chip-muted {
+    @apply border-black/10 bg-white/70 text-slate-600 hover:border-slate-300 hover:text-slate-900;
+  }
+
+  .section-title {
+    @apply text-sm font-semibold uppercase tracking-[0.24em] text-slate-500;
+  }
+}
