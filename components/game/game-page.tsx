@@ -117,81 +117,108 @@ function DayPhasePanel({
   const eliminationCandidates = players.filter(
     (player) => player.status === "alive" || phase.eliminated?.playerId === player.id,
   );
+  const usesSheriffSpeechSections = phase.day === 1;
+  const generalSpeechEntries = [...phase.speechesUp, ...phase.speechesDown].sort((left, right) =>
+    left.createdAt.localeCompare(right.createdAt),
+  );
 
   return (
     <div className="space-y-5">
-      <section className="panel p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="section-title">当前写入位置</p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-950">白天记录分区</h2>
-            <p className="mt-2 text-sm text-slate-600">后续快捷记录会持续写入当前选中的发言分区。</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {DAY_SECTION_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-semibold transition",
-                  activeSection === option.value
-                    ? "border-amber-500 bg-amber-500 text-white"
-                    : "border-black/10 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
-                )}
-                onClick={() => onSelectSection(option.value)}
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+      {usesSheriffSpeechSections ? (
+        <>
+          <section className="panel p-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="section-title">当前写入位置</p>
+                <h2 className="mt-2 text-xl font-semibold text-slate-950">白天记录分区</h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  第1天保留警上和警下两个发言分区。
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {DAY_SECTION_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    className={cn(
+                      "rounded-full border px-4 py-2 text-sm font-semibold transition",
+                      activeSection === option.value
+                        ? "border-amber-500 bg-amber-500 text-white"
+                        : "border-black/10 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
+                    )}
+                    onClick={() => onSelectSection(option.value)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
 
-      <section className={cn("panel p-5", activeSection === "speechesUp" && "ring-1 ring-amber-200")}>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="section-title">警上发言</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-950">警上发言记录</h3>
-          </div>
-          <div className="flex items-center gap-2">
-            {activeSection === "speechesUp" ? (
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                当前写入
-              </span>
-            ) : null}
+          <section
+            className={cn("panel p-5", activeSection === "speechesUp" && "ring-1 ring-amber-200")}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-title">警上发言</p>
+                <h3 className="mt-2 text-xl font-semibold text-slate-950">警上发言记录</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeSection === "speechesUp" ? (
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                    当前写入
+                  </span>
+                ) : null}
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {phase.speechesUp.length} 条
+                </span>
+              </div>
+            </div>
+            <div className="mt-4">
+              <StructuredEntryList entries={phase.speechesUp} emptyLabel="还没有警上发言记录。" />
+            </div>
+          </section>
+
+          <section
+            className={cn("panel p-5", activeSection === "speechesDown" && "ring-1 ring-amber-200")}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="section-title">警下发言</p>
+                <h3 className="mt-2 text-xl font-semibold text-slate-950">警下发言记录</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeSection === "speechesDown" ? (
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                    当前写入
+                  </span>
+                ) : null}
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {phase.speechesDown.length} 条
+                </span>
+              </div>
+            </div>
+            <div className="mt-4">
+              <StructuredEntryList entries={phase.speechesDown} emptyLabel="还没有警下发言记录。" />
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className="panel p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="section-title">发言记录</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-950">白天发言记录</h3>
+            </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-              {phase.speechesUp.length} 条
+              {generalSpeechEntries.length} 条
             </span>
           </div>
-        </div>
-        <div className="mt-4">
-          <StructuredEntryList entries={phase.speechesUp} emptyLabel="还没有警上发言记录。" />
-        </div>
-      </section>
-
-      <section
-        className={cn("panel p-5", activeSection === "speechesDown" && "ring-1 ring-amber-200")}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="section-title">警下发言</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-950">警下发言记录</h3>
+          <div className="mt-4">
+            <StructuredEntryList entries={generalSpeechEntries} emptyLabel="还没有发言记录。" />
           </div>
-          <div className="flex items-center gap-2">
-            {activeSection === "speechesDown" ? (
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                当前写入
-              </span>
-            ) : null}
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-              {phase.speechesDown.length} 条
-            </span>
-          </div>
-        </div>
-        <div className="mt-4">
-          <StructuredEntryList entries={phase.speechesDown} emptyLabel="还没有警下发言记录。" />
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="panel p-5">
         <div>
@@ -293,23 +320,36 @@ export function GamePage() {
   const selectedActionOption =
     QUICK_ACTION_OPTIONS.find((option) => option.value === selectedAction) ?? null;
   const currentSectionLabel =
-    DAY_SECTION_OPTIONS.find((option) => option.value === currentSection)?.label ?? "警上发言";
+    !isDayPhase(currentPhase)
+      ? "夜间流程"
+      : currentPhase.day > 1
+        ? "发言记录"
+        : DAY_SECTION_OPTIONS.find((option) => option.value === currentSection)?.label ?? "警上发言";
   const trimmedSpeechDraft = speechDraft.trim();
+  const hasIncompleteAction =
+    Boolean(selectedAction) &&
+    Boolean(selectedActionOption?.needsTargetHint) &&
+    selectedTargetId === null;
 
-  const quickActionPreview = useMemo(() => {
-    if (!selectedPlayer || !selectedAction || !currentPhase || !isDayPhase(currentPhase)) {
+  const entryPreview = useMemo(() => {
+    if (!selectedPlayer || !currentPhase || !isDayPhase(currentPhase)) {
       return null;
     }
 
-    if (selectedActionOption?.needsTargetHint && !selectedTargetId) {
+    if (hasIncompleteAction) {
       return `为 ${selectedPlayer.id}号 选择目标玩家后再记录。`;
+    }
+
+    if (!selectedAction && !trimmedSpeechDraft) {
+      return null;
     }
 
     return formatStructuredEntry({
       id: "preview",
       actorId: selectedPlayer.id,
-      actionType: selectedAction,
-      targetId: selectedTargetId ?? undefined,
+      actionType: selectedAction ?? undefined,
+      targetId: selectedAction ? selectedTargetId ?? undefined : undefined,
+      content: trimmedSpeechDraft || undefined,
       phaseIndex: currentPhaseIndex,
       section: currentSection,
       createdAt: new Date().toISOString(),
@@ -318,36 +358,18 @@ export function GamePage() {
     currentPhase,
     currentPhaseIndex,
     currentSection,
+    hasIncompleteAction,
     selectedAction,
-    selectedActionOption?.needsTargetHint,
     selectedPlayer,
     selectedTargetId,
+    trimmedSpeechDraft,
   ]);
 
-  const speechPreview = useMemo(() => {
-    if (!selectedPlayer || !currentPhase || !isDayPhase(currentPhase) || !trimmedSpeechDraft) {
-      return null;
-    }
-
-    return formatStructuredEntry({
-      id: "preview-speech",
-      actorId: selectedPlayer.id,
-      content: trimmedSpeechDraft,
-      phaseIndex: currentPhaseIndex,
-      section: currentSection,
-      createdAt: new Date().toISOString(),
-    });
-  }, [currentPhase, currentPhaseIndex, currentSection, selectedPlayer, trimmedSpeechDraft]);
-
-  const canSaveQuickAction =
-    Boolean(selectedPlayer) &&
-    Boolean(selectedAction) &&
-    Boolean(currentPhase && isDayPhase(currentPhase)) &&
-    (!selectedActionOption?.needsTargetHint || selectedTargetId !== null);
-  const canSaveSpeech =
+  const canSaveEntry =
     Boolean(selectedPlayer) &&
     Boolean(currentPhase && isDayPhase(currentPhase)) &&
-    trimmedSpeechDraft.length > 0;
+    !hasIncompleteAction &&
+    (Boolean(selectedAction) || trimmedSpeechDraft.length > 0);
 
   useEffect(() => {
     setSelectedAction(null);
@@ -385,6 +407,12 @@ export function GamePage() {
   }
 
   const handleSelectAction = (action: QuickActionType) => {
+    if (selectedAction === action) {
+      setSelectedAction(null);
+      setSelectedTargetId(null);
+      return;
+    }
+
     setSelectedAction(action);
 
     const option = QUICK_ACTION_OPTIONS.find((item) => item.value === action);
@@ -393,33 +421,23 @@ export function GamePage() {
     }
   };
 
-  const handleSaveQuickAction = () => {
-    if (!selectedPlayer || !selectedAction || !currentPhase || !isDayPhase(currentPhase)) {
+  const handleSaveEntry = () => {
+    if (!selectedPlayer || !currentPhase || !isDayPhase(currentPhase) || hasIncompleteAction) {
       return;
     }
 
-    if (selectedActionOption?.needsTargetHint && selectedTargetId === null) {
+    if (!selectedAction && !trimmedSpeechDraft) {
       return;
     }
 
     addStructuredEntry({
       actorId: selectedPlayer.id,
-      actionType: selectedAction,
-      targetId: selectedTargetId ?? undefined,
+      actionType: selectedAction ?? undefined,
+      targetId: selectedAction ? selectedTargetId ?? undefined : undefined,
+      content: trimmedSpeechDraft || undefined,
     });
     setSelectedAction(null);
     setSelectedTargetId(null);
-  };
-
-  const handleSaveSpeech = () => {
-    if (!selectedPlayer || !currentPhase || !isDayPhase(currentPhase) || !trimmedSpeechDraft) {
-      return;
-    }
-
-    addStructuredEntry({
-      actorId: selectedPlayer.id,
-      content: trimmedSpeechDraft,
-    });
     setSpeechDraft("");
   };
 
@@ -627,109 +645,102 @@ export function GamePage() {
               </div>
 
               {selectedPlayer ? (
-                <div className="mt-5 space-y-5">
-                  <section className="rounded-3xl border border-black/10 bg-white/50 p-4">
-                    <p className="text-sm font-medium text-slate-600">选择动作</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {QUICK_ACTION_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          className={cn(
-                            "rounded-full border px-4 py-2 text-sm font-semibold transition",
-                            selectedAction === option.value
-                              ? "border-amber-500 bg-amber-500 text-white"
-                              : "border-black/10 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
-                          )}
-                          disabled={!isDayPhase(currentPhase)}
-                          onClick={() => handleSelectAction(option.value)}
-                          type="button"
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    {selectedActionOption?.needsTargetHint ? (
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium text-slate-600">目标玩家</p>
-                          <button
-                            className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
-                            onClick={() => setSelectedTargetId(null)}
-                            type="button"
-                          >
-                            清空目标
-                          </button>
-                        </div>
-                        <div className="mt-2">
-                          <PlayerNumberChips
-                            excludeId={selectedPlayer.id}
-                            onSelect={setSelectedTargetId}
-                            players={players}
-                            selectedId={selectedTargetId}
-                          />
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-                      {isDayPhase(currentPhase)
-                        ? quickActionPreview ?? "先选择动作；需要目标时再点选玩家号码。"
-                        : "当前是夜晚阶段，快捷记录会在白天阶段恢复。"}
-                    </div>
-
+                <section className="mt-5 rounded-3xl border border-black/10 bg-white/50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-slate-600">快捷动作</p>
                     <button
-                      className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                      disabled={!canSaveQuickAction}
-                      onClick={handleSaveQuickAction}
+                      className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                      onClick={() => {
+                        setSelectedAction(null);
+                        setSelectedTargetId(null);
+                      }}
                       type="button"
                     >
-                      记录到当前阶段
+                      清空动作
                     </button>
-                  </section>
-
-                  <section className="rounded-3xl border border-black/10 bg-white/50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <label
-                        className="text-sm font-medium text-slate-600"
-                        htmlFor="speech-draft"
-                      >
-                        补充发言
-                      </label>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {QUICK_ACTION_OPTIONS.map((option) => (
                       <button
-                        className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
-                        onClick={() => setSpeechDraft("")}
+                        key={option.value}
+                        className={cn(
+                          "rounded-full border px-4 py-2 text-sm font-semibold transition",
+                          selectedAction === option.value
+                            ? "border-amber-500 bg-amber-500 text-white"
+                            : "border-black/10 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
+                        )}
+                        disabled={!isDayPhase(currentPhase)}
+                        onClick={() => handleSelectAction(option.value)}
                         type="button"
                       >
-                        清空输入
+                        {option.label}
                       </button>
+                    ))}
+                  </div>
+
+                  {selectedActionOption?.needsTargetHint ? (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-slate-600">目标玩家</p>
+                        <button
+                          className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                          onClick={() => setSelectedTargetId(null)}
+                          type="button"
+                        >
+                          清空目标
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <PlayerNumberChips
+                          excludeId={selectedPlayer.id}
+                          onSelect={setSelectedTargetId}
+                          players={players}
+                          selectedId={selectedTargetId}
+                        />
+                      </div>
                     </div>
-                    <textarea
-                      className="mt-3 min-h-28 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                      disabled={!isDayPhase(currentPhase)}
-                      id="speech-draft"
-                      onChange={(event) => setSpeechDraft(event.target.value)}
-                      placeholder={`输入 ${selectedPlayer.id}号 的具体发言，例如：我先站边2号，警徽流看7号。`}
-                      rows={4}
-                      value={speechDraft}
-                    />
-                    <div className="mt-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-900">
-                      {isDayPhase(currentPhase)
-                        ? speechPreview ?? "可以直接打字记录玩家原话、逻辑、警徽流和临场判断。"
-                        : "当前是夜晚阶段，文字发言记录会在白天阶段恢复。"}
-                    </div>
+                  ) : null}
+
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <label className="text-sm font-medium text-slate-600" htmlFor="speech-draft">
+                      发言内容
+                    </label>
                     <button
-                      className="mt-3 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                      disabled={!canSaveSpeech}
-                      onClick={handleSaveSpeech}
+                      className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                      onClick={() => setSpeechDraft("")}
                       type="button"
                     >
-                      记录文字发言
+                      清空输入
                     </button>
-                  </section>
-                </div>
+                  </div>
+                  <textarea
+                    className="mt-3 min-h-28 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    disabled={!isDayPhase(currentPhase)}
+                    id="speech-draft"
+                    onChange={(event) => setSpeechDraft(event.target.value)}
+                    placeholder={`输入 ${selectedPlayer.id}号 的具体发言，例如：我先站边2号，警徽流看7号。`}
+                    rows={4}
+                    value={speechDraft}
+                  />
+
+                  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                    {isDayPhase(currentPhase)
+                      ? entryPreview ?? "可以只记动作、只记发言，或把动作和发言一起记成一条。"
+                      : "当前是夜晚阶段，发言记录会在白天阶段恢复。"}
+                  </div>
+
+                  <button
+                    className="mt-3 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    disabled={!canSaveEntry}
+                    onClick={handleSaveEntry}
+                    type="button"
+                  >
+                    记录当前发言
+                  </button>
+                </section>
               ) : (
                 <div className="mt-5 rounded-2xl border border-dashed border-black/10 bg-white/50 px-4 py-5 text-sm leading-7 text-slate-500">
-                  从左侧点选一个玩家卡片，然后直接选择 跳预 / 金水 / 查杀 / 站边 / 打 / 保 / 划水，或者直接输入这名玩家的发言内容。
+                  从左侧点选一个玩家卡片，然后直接选择 跳预 / 金水 / 查杀 / 站边 / 打 / 保 / 划水，再把发言内容一起记成一条。
                 </div>
               )}
             </div>

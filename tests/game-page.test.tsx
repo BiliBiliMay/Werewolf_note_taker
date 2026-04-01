@@ -17,20 +17,21 @@ describe("game page", () => {
     gameStore.setState({ hasHydrated: true });
   });
 
-  it("records a quick action into the current section", async () => {
+  it("records action and speech together into one entry", async () => {
     const user = userEvent.setup();
 
     gameStore.getState().selectPlayer(9);
     render(<GamePage />);
 
-    const quickActionSection = screen.getByText("选择动作").closest("section");
+    const quickActionSection = screen.getByText("快捷动作").closest("section");
     expect(quickActionSection).not.toBeNull();
 
     await user.click(within(quickActionSection as HTMLElement).getByRole("button", { name: "查杀" }));
     await user.click(screen.getAllByRole("button", { name: "5号" })[0]);
-    await user.click(screen.getByRole("button", { name: "记录到当前阶段" }));
+    await user.type(screen.getByLabelText("发言内容"), "我先听3号更新。");
+    await user.click(screen.getByRole("button", { name: "记录当前发言" }));
 
-    expect(screen.getByText("9号：查杀5号")).toBeInTheDocument();
+    expect(screen.getByText("9号：查杀5号；我先听3号更新。")).toBeInTheDocument();
   });
 
   it("records typed speech into the current section", async () => {
@@ -39,9 +40,19 @@ describe("game page", () => {
     gameStore.getState().selectPlayer(4);
     render(<GamePage />);
 
-    await user.type(screen.getByLabelText("补充发言"), "我先站边2号，再看7号的更新。");
-    await user.click(screen.getByRole("button", { name: "记录文字发言" }));
+    await user.type(screen.getByLabelText("发言内容"), "我先站边2号，再看7号的更新。");
+    await user.click(screen.getByRole("button", { name: "记录当前发言" }));
 
     expect(screen.getByText("4号：我先站边2号，再看7号的更新。")).toBeInTheDocument();
+  });
+
+  it("uses a single speech list from day 2 onward", () => {
+    gameStore.getState().nextPhase();
+    gameStore.getState().nextPhase();
+    render(<GamePage />);
+
+    expect(screen.getByText("白天发言记录")).toBeInTheDocument();
+    expect(screen.queryByText("警上发言记录")).not.toBeInTheDocument();
+    expect(screen.queryByText("警下发言记录")).not.toBeInTheDocument();
   });
 });

@@ -88,27 +88,29 @@ export function getPhaseLabelZh(phase: Phase) {
 }
 
 export function formatStructuredEntry(entry: StructuredEntry) {
-  const content = entry.content?.trim();
-
-  if (content) {
-    return `${entry.actorId}号：${content}`;
-  }
-
-  const actionLabel = entry.actionType ? QUICK_ACTION_LABELS[entry.actionType] : "记录";
+  const actionLabel = entry.actionType ? QUICK_ACTION_LABELS[entry.actionType] : "";
   const targetText = entry.targetId ? `${entry.targetId}号` : "";
-  return `${entry.actorId}号：${actionLabel}${targetText}`;
+  const content = entry.content?.trim();
+  const parts = [`${actionLabel}${targetText}`, content].filter(Boolean);
+
+  return `${entry.actorId}号：${parts.join("；") || "记录"}`;
 }
 
 export function formatStructuredEntryCompact(entry: StructuredEntry) {
   const content = entry.content?.trim();
+  const parts = [];
 
-  if (content) {
-    return `[${entry.actorId}号] [发言] ${content}`;
+  if (entry.actionType) {
+    const actionLabel = QUICK_ACTION_LABELS[entry.actionType];
+    const targetText = entry.targetId ? ` -> ${entry.targetId}号` : "";
+    parts.push(`[${actionLabel}]${targetText}`);
   }
 
-  const actionLabel = entry.actionType ? QUICK_ACTION_LABELS[entry.actionType] : "记录";
-  const targetText = entry.targetId ? ` -> ${entry.targetId}号` : "";
-  return `[${entry.actorId}号] [${actionLabel}]${targetText}`;
+  if (content) {
+    parts.push(`[发言] ${content}`);
+  }
+
+  return `[${entry.actorId}号] ${parts.join(" ") || "[记录]"}`;
 }
 
 export function getAliveCount(players: Player[]) {

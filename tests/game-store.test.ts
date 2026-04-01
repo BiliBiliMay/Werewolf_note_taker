@@ -63,12 +63,14 @@ describe("game store", () => {
     }
   });
 
-  it("stores free-form speech content in the active section", () => {
+  it("stores action and speech together in one entry", () => {
     const store = createGameStore(createMemoryStorage());
 
     store.getState().startGame(9);
     store.getState().addStructuredEntry({
       actorId: 4,
+      actionType: "side-with",
+      targetId: 2,
       content: "我先站边2号，再看7号。",
     });
 
@@ -79,7 +81,34 @@ describe("game store", () => {
       expect(dayPhase.speechesUp).toHaveLength(1);
       expect(dayPhase.speechesUp[0]).toMatchObject({
         actorId: 4,
+        actionType: "side-with",
+        targetId: 2,
         content: "我先站边2号，再看7号。",
+      });
+    }
+  });
+
+  it("stores day 2 speech entries in the general day list", () => {
+    const store = createGameStore(createMemoryStorage());
+
+    store.getState().startGame(9);
+    store.getState().setActiveSection("speechesDown");
+    store.getState().nextPhase();
+    store.getState().nextPhase();
+    store.getState().addStructuredEntry({
+      actorId: 6,
+      content: "这一轮直接听更新。",
+    });
+
+    const dayPhase = store.getState().phases[2];
+    expect(dayPhase.type).toBe("day");
+
+    if (dayPhase.type === "day") {
+      expect(dayPhase.speechesUp).toHaveLength(1);
+      expect(dayPhase.speechesDown).toHaveLength(0);
+      expect(dayPhase.speechesUp[0]).toMatchObject({
+        actorId: 6,
+        content: "这一轮直接听更新。",
       });
     }
   });
