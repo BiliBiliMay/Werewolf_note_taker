@@ -13,7 +13,8 @@ export type QuickActionType =
   | "accuse-wolf"
   | "side-with"
   | "pressure"
-  | "protect";
+  | "protect"
+  | "idle";
 export type DaySection = "speechesUp" | "speechesDown";
 export type PhaseSection = DaySection | "nightNotes";
 

@@ -5,6 +5,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { STORAGE_KEY } from "@/lib/game/constants";
 import {
+  createId,
   createInitialDayPhase,
   createNextPhase,
   createPlayers,
@@ -168,15 +169,12 @@ export function createGameStore(storage?: StateStorage) {
           set((state) => {
             const phase = state.phases[state.currentPhaseIndex];
 
-            if (!phase) {
+            if (!phase || !isDayPhase(phase)) {
               return state;
             }
 
-            const section: PhaseSection = isDayPhase(phase)
-              ? state.activeSection === "nightNotes"
-                ? "speechesUp"
-                : state.activeSection
-              : "nightNotes";
+            const section: PhaseSection =
+              state.activeSection === "speechesDown" ? "speechesDown" : "speechesUp";
 
             const entry = {
               id: createId("entry"),
@@ -193,23 +191,20 @@ export function createGameStore(storage?: StateStorage) {
                 return currentPhase;
               }
 
-              if (isDayPhase(currentPhase)) {
-                if (section === "speechesDown") {
-                  return {
-                    ...currentPhase,
-                    speechesDown: [...currentPhase.speechesDown, entry],
-                  };
-                }
+              if (!isDayPhase(currentPhase)) {
+                return currentPhase;
+              }
 
+              if (section === "speechesDown") {
                 return {
                   ...currentPhase,
-                  speechesUp: [...currentPhase.speechesUp, entry],
+                  speechesDown: [...currentPhase.speechesDown, entry],
                 };
               }
 
               return {
                 ...currentPhase,
-                notes: [...currentPhase.notes, entry],
+                speechesUp: [...currentPhase.speechesUp, entry],
               };
             });
 
@@ -346,7 +341,7 @@ export function createGameStore(storage?: StateStorage) {
             return {
               phases: [...state.phases, phase],
               currentPhaseIndex: state.phases.length,
-              activeSection: phase.type === "day" ? "speechesUp" : "nightNotes",
+              activeSection: "speechesUp",
             };
           });
         },
@@ -359,7 +354,7 @@ export function createGameStore(storage?: StateStorage) {
 
           set({
             currentPhaseIndex: index,
-            activeSection: phase.type === "day" ? "speechesUp" : "nightNotes",
+            activeSection: "speechesUp",
           });
         },
         setHasHydrated: (value) => {
@@ -392,5 +387,3 @@ export const gameStore = createGameStore();
 export function useGameStore<T>(selector: (state: GameStore) => T) {
   return useStore(gameStore, selector);
 }
-
-

@@ -58,13 +58,13 @@ export function HomePage() {
                 狼人杀笔记助手
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-700">
-                给手机局玩家准备的第二屏笔记台。点一点就能记录跳预、金水、查杀、站边、投票和出局进程，节奏快的时候也不容易漏信息。
+                给手机局玩家准备的第二屏笔记台。点一点就能记录跳预、金水、查杀、站边、划水和出局进程，节奏快的时候也不容易漏信息。
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3 text-sm text-slate-700">
               <span className="chip chip-muted">结构化发言</span>
-              <span className="chip chip-muted">快速点选记票</span>
+              <span className="chip chip-muted">快捷玩家标签</span>
               <span className="chip chip-muted">本地自动保存</span>
               <span className="chip chip-muted">桌面优先布局</span>
             </div>
@@ -100,7 +100,7 @@ export function HomePage() {
             <p className="section-title">核心能力</p>
             <div className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
               <p>1. 点击玩家卡片，立刻打开快捷记录面板。</p>
-              <p>2. 当前阶段、警上警下、投票与出局信息都保持结构化。</p>
+              <p>2. 当前阶段、警上警下和出局信息都保持结构化。</p>
               <p>3. 所有状态保存在浏览器本地，不依赖后端。</p>
             </div>
           </div>
@@ -109,7 +109,7 @@ export function HomePage() {
             <p className="section-title">推荐流程</p>
             <div className="mt-5 space-y-3 text-sm leading-7 text-slate-700">
               <p>开局先设置人数。</p>
-              <p>发言时点选玩家与动作，投票时切到投票区批量记录。</p>
+              <p>发言时点选玩家与动作，再决定写入警上还是警下。</p>
               <p>白天结束后点 <span className="font-semibold text-slate-950">进入下一阶段</span> 推进流程。</p>
             </div>
           </div>

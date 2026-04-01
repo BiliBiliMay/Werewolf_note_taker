@@ -1,10 +1,9 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   DAY_SECTION_OPTIONS,
-  PHASE_SECTION_LABELS,
   PLAYER_TAG_LABELS,
   PLAYER_TAG_OPTIONS,
   QUICK_ACTION_OPTIONS,
@@ -12,14 +11,12 @@ import {
   ROLE_GUESS_META,
 } from "@/lib/game/constants";
 import {
-  computeVoteLeader,
   formatStructuredEntry,
   formatStructuredEntryCompact,
   getAliveCount,
   getEliminatedPlayers,
   getPhaseLabel,
   getPhaseLabelZh,
-  getSheriff,
   isDayPhase,
 } from "@/lib/game/helpers";
 import type {
@@ -27,6 +24,7 @@ import type {
   DaySection,
   Player,
   QuickActionType,
+  RealRole,
   StructuredEntry,
 } from "@/lib/game/types";
 import { useGameStore } from "@/lib/store/game-store";
@@ -42,7 +40,7 @@ function StructuredEntryList({
 }) {
   if (entries.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-black/10 bg-white/50 px-4 py-5 text-sm text-slate-500">
+      <div className="rounded-2xl border border-dashed border-black/10 bg-white/55 px-4 py-5 text-sm text-slate-500">
         {emptyLabel}
       </div>
     );
@@ -53,7 +51,7 @@ function StructuredEntryList({
       {entries.map((entry) => (
         <div
           key={entry.id}
-          className="rounded-2xl border border-black/10 bg-white/70 px-4 py-3 shadow-sm"
+          className="rounded-2xl border border-black/10 bg-white/75 px-4 py-3 shadow-sm"
         >
           <div className="text-sm font-semibold text-slate-900">{formatStructuredEntry(entry)}</div>
           <div className="mt-1 text-xs text-slate-500">{formatStructuredEntryCompact(entry)}</div>
@@ -106,12 +104,6 @@ function DayPhasePanel({
   players,
   activeSection,
   onSelectSection,
-  voteVoterId,
-  voteTargetId,
-  onSelectVoteVoter,
-  onSelectVoteTarget,
-  onSaveVote,
-  onRemoveVote,
   onSetElimination,
   onAssignRealRole,
 }: {
@@ -119,25 +111,21 @@ function DayPhasePanel({
   players: Player[];
   activeSection: DaySection;
   onSelectSection: (section: DaySection) => void;
-  voteVoterId: number | null;
-  voteTargetId: number | null;
-  onSelectVoteVoter: (playerId: number) => void;
-  onSelectVoteTarget: (playerId: number) => void;
-  onSaveVote: () => void;
-  onRemoveVote: (playerId: number) => void;
   onSetElimination: (playerId: number | null) => void;
-  onAssignRealRole: (playerId: number, role: "unknown" | "good" | "wolf" | "god") => void;
+  onAssignRealRole: (playerId: number, role: RealRole) => void;
 }) {
-  const alivePlayers = players.filter((player) => player.status === "alive");
-  const voteLeader = computeVoteLeader(phase.votes);
+  const eliminationCandidates = players.filter(
+    (player) => player.status === "alive" || phase.eliminated?.playerId === player.id,
+  );
 
   return (
     <div className="space-y-5">
       <section className="panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="section-title">当前记录分区</p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-950">快捷记录将写入这里</h2>
+            <p className="section-title">当前写入位置</p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">白天记录分区</h2>
+            <p className="mt-2 text-sm text-slate-600">后续快捷记录会持续写入当前选中的发言分区。</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {DAY_SECTION_OPTIONS.map((option) => (
@@ -159,30 +147,46 @@ function DayPhasePanel({
         </div>
       </section>
 
-      <section className="panel p-5">
+      <section className={cn("panel p-5", activeSection === "speechesUp" && "ring-1 ring-amber-200")}>
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="section-title">警上发言</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-950">警上发言</h3>
+            <h3 className="mt-2 text-xl font-semibold text-slate-950">警上发言记录</h3>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            {phase.speechesUp.length} 条
-          </span>
+          <div className="flex items-center gap-2">
+            {activeSection === "speechesUp" ? (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                当前写入
+              </span>
+            ) : null}
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              {phase.speechesUp.length} 条
+            </span>
+          </div>
         </div>
         <div className="mt-4">
           <StructuredEntryList entries={phase.speechesUp} emptyLabel="还没有警上发言记录。" />
         </div>
       </section>
 
-      <section className="panel p-5">
+      <section
+        className={cn("panel p-5", activeSection === "speechesDown" && "ring-1 ring-amber-200")}
+      >
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="section-title">警下发言</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-950">警下发言</h3>
+            <h3 className="mt-2 text-xl font-semibold text-slate-950">警下发言记录</h3>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-            {phase.speechesDown.length} 条
-          </span>
+          <div className="flex items-center gap-2">
+            {activeSection === "speechesDown" ? (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                当前写入
+              </span>
+            ) : null}
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              {phase.speechesDown.length} 条
+            </span>
+          </div>
         </div>
         <div className="mt-4">
           <StructuredEntryList entries={phase.speechesDown} emptyLabel="还没有警下发言记录。" />
@@ -190,87 +194,17 @@ function DayPhasePanel({
       </section>
 
       <section className="panel p-5">
-        <p className="section-title">投票关系</p>
-        <h3 className="mt-2 text-xl font-semibold text-slate-950">投票关系</h3>
-
-        <div className="mt-5 space-y-4">
-          <div>
-            <p className="text-sm font-medium text-slate-600">选择投票人</p>
-            <div className="mt-2">
-              <PlayerNumberChips
-                onSelect={onSelectVoteVoter}
-                players={alivePlayers}
-                selectedId={voteVoterId}
-              />
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-slate-600">选择投票目标</p>
-            <div className="mt-2">
-              <PlayerNumberChips
-                excludeId={voteVoterId ?? undefined}
-                onSelect={onSelectVoteTarget}
-                players={alivePlayers}
-                selectedId={voteTargetId}
-              />
-            </div>
-          </div>
-
-          <button
-            className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-            disabled={voteVoterId === null || voteTargetId === null}
-            onClick={onSaveVote}
-            type="button"
-          >
-            保存投票
-          </button>
+        <div>
+          <p className="section-title">出局信息</p>
+          <h3 className="mt-2 text-xl font-semibold text-slate-950">白天出局信息</h3>
+          <p className="mt-2 text-sm text-slate-600">设置出局玩家和真实身份后，右侧摘要会立刻同步。</p>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-black/10 bg-white/60 p-4 text-sm text-slate-700">
-          {voteLeader.status === "empty" ? "暂无投票。" : null}
-          {voteLeader.status === "tie" ? `当前结果：平票（${voteLeader.voteCount} 票）` : null}
-          {voteLeader.status === "leader"
-            ? `当前最高票：${voteLeader.leaderId}号（${voteLeader.voteCount} 票）`
-            : null}
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {phase.votes.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-black/10 bg-white/50 px-4 py-5 text-sm text-slate-500">
-              还没有投票记录。
-            </div>
-          ) : (
-            phase.votes.map((vote) => (
-              <div
-                key={vote.voterId}
-                className="flex items-center justify-between rounded-2xl border border-black/10 bg-white/70 px-4 py-3"
-              >
-                <div className="text-sm font-semibold text-slate-900">
-                  {vote.voterId}号 -&gt; {vote.targetId}号
-                </div>
-                <button
-                  className="text-sm font-medium text-rose-600 transition hover:text-rose-700"
-                  onClick={() => onRemoveVote(vote.voterId)}
-                  type="button"
-                >
-                  删除
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="panel p-5">
-        <p className="section-title">出局信息</p>
-        <h3 className="mt-2 text-xl font-semibold text-slate-950">出局信息</h3>
-
-        <div className="mt-5 space-y-4">
+        <div className="mt-5 space-y-5">
           <div>
             <p className="text-sm font-medium text-slate-600">选择出局玩家</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {alivePlayers.map((player) => (
+              {eliminationCandidates.map((player) => (
                 <button
                   key={player.id}
                   className={cn(
@@ -296,7 +230,7 @@ function DayPhasePanel({
           </div>
 
           <div>
-            <p className="text-sm font-medium text-slate-600">揭示真实身份</p>
+            <p className="text-sm font-medium text-slate-600">真实身份</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {REAL_ROLE_OPTIONS.map((option) => (
                 <button
@@ -341,8 +275,6 @@ export function GamePage() {
   const togglePinned = useGameStore((state) => state.togglePinned);
   const setActiveSection = useGameStore((state) => state.setActiveSection);
   const addStructuredEntry = useGameStore((state) => state.addStructuredEntry);
-  const setVote = useGameStore((state) => state.setVote);
-  const removeVote = useGameStore((state) => state.removeVote);
   const setElimination = useGameStore((state) => state.setElimination);
   const assignRealRole = useGameStore((state) => state.assignRealRole);
   const nextPhase = useGameStore((state) => state.nextPhase);
@@ -350,23 +282,25 @@ export function GamePage() {
 
   const [selectedAction, setSelectedAction] = useState<QuickActionType | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
-  const [voteVoterId, setVoteVoterId] = useState<number | null>(null);
-  const [voteTargetId, setVoteTargetId] = useState<number | null>(null);
 
   const currentPhase = phases[currentPhaseIndex];
   const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? null;
   const aliveCount = getAliveCount(players);
-  const sheriff = getSheriff(players);
   const eliminatedPlayers = getEliminatedPlayers(players);
   const pinnedPlayers = players.filter((player) => player.pinned);
-  const alivePlayers = players.filter((player) => player.status === "alive");
-  const voteLeader = currentPhase && isDayPhase(currentPhase)
-    ? computeVoteLeader(currentPhase.votes)
-    : null;
+  const currentSection: DaySection = activeSection === "speechesDown" ? "speechesDown" : "speechesUp";
+  const selectedActionOption =
+    QUICK_ACTION_OPTIONS.find((option) => option.value === selectedAction) ?? null;
+  const currentSectionLabel =
+    DAY_SECTION_OPTIONS.find((option) => option.value === currentSection)?.label ?? "警上发言";
 
   const quickActionPreview = useMemo(() => {
-    if (!selectedPlayer || !selectedAction || !currentPhase) {
+    if (!selectedPlayer || !selectedAction || !currentPhase || !isDayPhase(currentPhase)) {
       return null;
+    }
+
+    if (selectedActionOption?.needsTargetHint && !selectedTargetId) {
+      return `为 ${selectedPlayer.id}号 选择目标玩家后再记录。`;
     }
 
     return formatStructuredEntry({
@@ -375,20 +309,29 @@ export function GamePage() {
       actionType: selectedAction,
       targetId: selectedTargetId ?? undefined,
       phaseIndex: currentPhaseIndex,
-      section: currentPhase.type === "day" ? activeSection : "nightNotes",
+      section: currentSection,
       createdAt: new Date().toISOString(),
     });
-  }, [activeSection, currentPhase, currentPhaseIndex, selectedAction, selectedPlayer, selectedTargetId]);
+  }, [
+    currentPhase,
+    currentPhaseIndex,
+    currentSection,
+    selectedAction,
+    selectedActionOption?.needsTargetHint,
+    selectedPlayer,
+    selectedTargetId,
+  ]);
+
+  const canSaveQuickAction =
+    Boolean(selectedPlayer) &&
+    Boolean(selectedAction) &&
+    Boolean(currentPhase && isDayPhase(currentPhase)) &&
+    (!selectedActionOption?.needsTargetHint || selectedTargetId !== null);
 
   useEffect(() => {
     setSelectedAction(null);
     setSelectedTargetId(null);
   }, [currentPhaseIndex, selectedPlayerId]);
-
-  useEffect(() => {
-    setVoteVoterId(null);
-    setVoteTargetId(null);
-  }, [currentPhaseIndex]);
 
   if (!hasHydrated) {
     return (
@@ -419,12 +362,21 @@ export function GamePage() {
     );
   }
 
-  const insertionSectionLabel = currentPhase.type === "day"
-    ? PHASE_SECTION_LABELS[activeSection === "nightNotes" ? "speechesUp" : activeSection]
-    : PHASE_SECTION_LABELS.nightNotes;
+  const handleSelectAction = (action: QuickActionType) => {
+    setSelectedAction(action);
+
+    const option = QUICK_ACTION_OPTIONS.find((item) => item.value === action);
+    if (!option?.needsTargetHint) {
+      setSelectedTargetId(null);
+    }
+  };
 
   const handleSaveQuickAction = () => {
-    if (!selectedPlayer || !selectedAction) {
+    if (!selectedPlayer || !selectedAction || !currentPhase || !isDayPhase(currentPhase)) {
+      return;
+    }
+
+    if (selectedActionOption?.needsTargetHint && selectedTargetId === null) {
       return;
     }
 
@@ -437,22 +389,12 @@ export function GamePage() {
     setSelectedTargetId(null);
   };
 
-  const handleSaveVote = () => {
-    if (voteVoterId === null || voteTargetId === null) {
-      return;
-    }
-
-    setVote(voteVoterId, voteTargetId);
-    setVoteVoterId(null);
-    setVoteTargetId(null);
-  };
-
   return (
     <main className="min-h-screen px-4 py-5 lg:px-6 lg:py-6">
       <div className="mx-auto max-w-[1600px] space-y-5">
         <header className="panel flex flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div>
-            <p className="section-title">第二屏笔记台</p>
+            <p className="section-title">简化记录版</p>
             <h1 className="mt-2 font-display text-3xl text-slate-950">狼人杀笔记助手</h1>
             <p className="mt-2 text-sm text-slate-600">
               {playerCount} 人局 · 当前阶段 {getPhaseLabelZh(currentPhase)}
@@ -463,7 +405,7 @@ export function GamePage() {
               存活 {aliveCount}
             </span>
             <span className="rounded-full border border-black/10 bg-white/70 px-4 py-2 font-semibold">
-              警长 {sheriff ? `${sheriff.id}号` : "未定"}
+              当前写入 {currentSectionLabel}
             </span>
             <Link
               className="rounded-full border border-black/10 bg-white/70 px-4 py-2 font-semibold transition hover:border-slate-300 hover:text-slate-950"
@@ -474,19 +416,19 @@ export function GamePage() {
           </div>
         </header>
 
-        <div className="grid gap-5 xl:grid-cols-[260px_minmax(0,1fr)_300px]">
+        <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)_320px]">
           <aside className="panel h-fit p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="section-title">玩家列表</p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-950">玩家面板</h2>
+                <h2 className="mt-2 text-xl font-semibold text-slate-950">左侧玩家面板</h2>
               </div>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                 {playerCount} 人局
               </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 space-y-3">
               {players.map((player) => {
                 const roleMeta = ROLE_GUESS_META[player.roleGuess];
                 const isSelected = selectedPlayerId === player.id;
@@ -496,9 +438,11 @@ export function GamePage() {
                   <article
                     key={player.id}
                     className={cn(
-                      "rounded-3xl border bg-white/80 p-3 transition",
-                      isSelected ? "border-amber-400 shadow-lg shadow-amber-100" : "border-black/10 hover:border-slate-300",
-                      isDead && "opacity-70 grayscale-[0.15]",
+                      "rounded-3xl border bg-white/80 p-4 transition",
+                      isSelected
+                        ? "border-amber-400 shadow-lg shadow-amber-100"
+                        : "border-black/10 hover:border-slate-300",
+                      isDead && "opacity-70",
                     )}
                     onClick={() => selectPlayer(player.id)}
                     onKeyDown={(event) => {
@@ -510,10 +454,10 @@ export function GamePage() {
                     role="button"
                     tabIndex={0}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-xs tracking-[0.24em] text-slate-400">玩家</div>
-                        <div className="mt-1 text-2xl font-semibold text-slate-950">{player.id}</div>
+                        <div className="mt-1 text-2xl font-semibold text-slate-950">{player.id}号</div>
                       </div>
                       <button
                         className={cn(
@@ -627,12 +571,14 @@ export function GamePage() {
             <div className="panel sticky top-5 z-10 p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p className="section-title">快捷操作</p>
+                  <p className="section-title">快捷记录</p>
                   <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                    {selectedPlayer ? `${selectedPlayer.id}号快捷记录` : "先选择一个玩家"}
+                    {selectedPlayer ? `${selectedPlayer.id}号快捷操作` : "先选择一个玩家"}
                   </h2>
                   <p className="mt-2 text-sm leading-7 text-slate-600">
-                    当前会写入 <span className="font-semibold text-slate-950">{insertionSectionLabel}</span>。
+                    {isDayPhase(currentPhase)
+                      ? `当前会写入 ${currentSectionLabel}。`
+                      : "夜晚阶段只保留流程占位，不记录发言。"}
                   </p>
                 </div>
                 {selectedPlayer ? (
@@ -660,7 +606,8 @@ export function GamePage() {
                               ? "border-amber-500 bg-amber-500 text-white"
                               : "border-black/10 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
                           )}
-                          onClick={() => setSelectedAction(option.value)}
+                          disabled={!isDayPhase(currentPhase)}
+                          onClick={() => handleSelectAction(option.value)}
                           type="button"
                         >
                           {option.label}
@@ -669,34 +616,38 @@ export function GamePage() {
                     </div>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-slate-600">可选目标</p>
-                      <button
-                        className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
-                        onClick={() => setSelectedTargetId(null)}
-                        type="button"
-                      >
-                        清空目标
-                      </button>
+                  {selectedActionOption?.needsTargetHint ? (
+                    <div>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-slate-600">目标玩家</p>
+                        <button
+                          className="text-sm font-medium text-slate-500 transition hover:text-slate-900"
+                          onClick={() => setSelectedTargetId(null)}
+                          type="button"
+                        >
+                          清空目标
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <PlayerNumberChips
+                          excludeId={selectedPlayer.id}
+                          onSelect={setSelectedTargetId}
+                          players={players}
+                          selectedId={selectedTargetId}
+                        />
+                      </div>
                     </div>
-                    <div className="mt-2">
-                      <PlayerNumberChips
-                        excludeId={selectedPlayer.id}
-                        onSelect={setSelectedTargetId}
-                        players={players}
-                        selectedId={selectedTargetId}
-                      />
-                    </div>
-                  </div>
+                  ) : null}
 
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
-                    {quickActionPreview ?? "先选择一个动作，可选目标后会实时预览记录内容。"}
+                    {isDayPhase(currentPhase)
+                      ? quickActionPreview ?? "先选择动作；需要目标时再点选玩家号码。"
+                      : "当前是夜晚阶段，快捷记录会在白天阶段恢复。"}
                   </div>
 
                   <button
                     className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    disabled={!selectedAction}
+                    disabled={!canSaveQuickAction}
                     onClick={handleSaveQuickAction}
                     type="button"
                   >
@@ -705,39 +656,30 @@ export function GamePage() {
                 </div>
               ) : (
                 <div className="mt-5 rounded-2xl border border-dashed border-black/10 bg-white/50 px-4 py-5 text-sm leading-7 text-slate-500">
-                  从左侧点选一个玩家卡片，然后直接选择 跳预 / 金水 / 查杀 / 站边 / 打 / 保。
+                  从左侧点选一个玩家卡片，然后直接选择 跳预 / 金水 / 查杀 / 站边 / 打 / 保 / 划水。
                 </div>
               )}
             </div>
 
-            {currentPhase.type === "day" ? (
+            {isDayPhase(currentPhase) ? (
               <DayPhasePanel
-                activeSection={activeSection === "nightNotes" ? "speechesUp" : activeSection}
+                activeSection={currentSection}
                 onAssignRealRole={assignRealRole}
-                onRemoveVote={removeVote}
-                onSaveVote={handleSaveVote}
                 onSelectSection={setActiveSection}
-                onSelectVoteTarget={setVoteTargetId}
-                onSelectVoteVoter={setVoteVoterId}
                 onSetElimination={setElimination}
                 phase={currentPhase}
                 players={players}
-                voteTargetId={voteTargetId}
-                voteVoterId={voteVoterId}
               />
             ) : (
-              <section className="panel p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="section-title">夜间记录</p>
-                    <h2 className="mt-2 text-2xl font-semibold text-slate-950">夜间记录</h2>
-                  </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    {currentPhase.notes.length} 条
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <StructuredEntryList entries={currentPhase.notes} emptyLabel="还没有夜间记录。" />
+              <section className="panel p-6">
+                <div>
+                  <p className="section-title">夜晚阶段</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-950">{getPhaseLabelZh(currentPhase)}</h2>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    当前简化版只保留白天发言和出局信息。夜晚阶段用于流程推进，点击
+                    <span className="px-1 font-semibold text-slate-950">进入下一阶段</span>
+                    即可继续到下一个白天。
+                  </p>
                 </div>
               </section>
             )}
@@ -745,32 +687,24 @@ export function GamePage() {
 
           <aside className="panel h-fit p-5">
             <div>
-              <p className="section-title">当前局势</p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">局势摘要</h2>
+              <p className="section-title">局势摘要</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">右侧摘要区</h2>
             </div>
 
             <div className="mt-5 grid gap-3">
               <div className="rounded-2xl border border-black/10 bg-white/70 p-4">
-                <div className="text-sm text-slate-500">警长</div>
-                <div className="mt-2 text-xl font-semibold text-slate-950">{sheriff ? `${sheriff.id}号` : "未定"}</div>
+                <div className="text-sm text-slate-500">当前阶段</div>
+                <div className="mt-2 text-xl font-semibold text-slate-950">{getPhaseLabelZh(currentPhase)}</div>
               </div>
               <div className="rounded-2xl border border-black/10 bg-white/70 p-4">
                 <div className="text-sm text-slate-500">存活人数</div>
                 <div className="mt-2 text-xl font-semibold text-slate-950">{aliveCount}</div>
               </div>
               <div className="rounded-2xl border border-black/10 bg-white/70 p-4">
-                <div className="text-sm text-slate-500">当前阶段</div>
-                <div className="mt-2 text-xl font-semibold text-slate-950">{getPhaseLabelZh(currentPhase)}</div>
+                <div className="text-sm text-slate-500">当前写入</div>
+                <div className="mt-2 text-xl font-semibold text-slate-950">{currentSectionLabel}</div>
               </div>
             </div>
-
-            {isDayPhase(currentPhase) ? (
-              <div className="mt-5 rounded-2xl border border-black/10 bg-white/70 p-4 text-sm leading-7 text-slate-700">
-                {voteLeader?.status === "leader" ? `当前最高票：${voteLeader.leaderId}号（${voteLeader.voteCount}票）` : null}
-                {voteLeader?.status === "tie" ? `当前投票状态：平票（${voteLeader.voteCount}票）` : null}
-                {voteLeader?.status === "empty" ? "当前投票状态：暂无记录" : null}
-              </div>
-            ) : null}
 
             <section className="mt-6">
               <div className="flex items-center justify-between gap-3">
@@ -789,7 +723,7 @@ export function GamePage() {
                       className="rounded-2xl border border-black/10 bg-white/70 px-4 py-3"
                     >
                       <div className="text-sm font-semibold text-slate-950">
-                        {player.id}号（{player.realRole ? ROLE_GUESS_META[player.realRole].label : "未知"}）
+                        {player.id}号 · {ROLE_GUESS_META[player.realRole ?? "unknown"].label}
                       </div>
                       <div className="mt-1 text-xs text-slate-500">
                         标签：
@@ -811,7 +745,7 @@ export function GamePage() {
               <div className="mt-3 space-y-3">
                 {pinnedPlayers.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-black/10 bg-white/50 px-4 py-5 text-sm text-slate-500">
-                    在左侧点“盯”即可固定重点玩家。
+                    在左侧点“盯”即可加入重点观察列表。
                   </div>
                 ) : (
                   pinnedPlayers.map((player) => (
@@ -824,36 +758,13 @@ export function GamePage() {
                       <div>
                         <div className="text-sm font-semibold text-slate-950">{player.id}号</div>
                         <div className="mt-1 text-xs text-slate-500">
-                          角色倾向：{ROLE_GUESS_META[player.roleGuess].label}
+                          {ROLE_GUESS_META[player.roleGuess].label}
                         </div>
                       </div>
-                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                        已盯住
-                      </span>
+                      <span className="text-xs font-semibold text-amber-700">查看</span>
                     </button>
                   ))
                 )}
-              </div>
-            </section>
-
-            <section className="mt-6">
-              <h3 className="text-lg font-semibold text-slate-950">存活玩家</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {alivePlayers.map((player) => (
-                  <button
-                    key={player.id}
-                    className={cn(
-                      "rounded-full border px-3 py-2 text-sm font-semibold transition",
-                      selectedPlayerId === player.id
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-black/10 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-950",
-                    )}
-                    onClick={() => selectPlayer(player.id)}
-                    type="button"
-                  >
-                    {player.id}号
-                  </button>
-                ))}
               </div>
             </section>
           </aside>

@@ -50,6 +50,7 @@ export const QUICK_ACTION_OPTIONS: Array<{
   { value: "side-with", label: "站边", needsTargetHint: true },
   { value: "pressure", label: "打", needsTargetHint: true },
   { value: "protect", label: "保", needsTargetHint: true },
+  { value: "idle", label: "划水", needsTargetHint: false },
 ];
 
 export const QUICK_ACTION_LABELS: Record<QuickActionType, string> = {
@@ -59,6 +60,7 @@ export const QUICK_ACTION_LABELS: Record<QuickActionType, string> = {
   "side-with": "站边",
   pressure: "打",
   protect: "保",
+  idle: "划水",
 };
 
 export const PLAYER_TAG_LABELS: Record<PlayerTag, string> = Object.fromEntries(
